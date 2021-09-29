@@ -3,10 +3,10 @@ import "./App.css";
 import { useEffect, useState } from "react";
 import { HashRouter, Switch, Route, Link } from "react-router-dom";
 import Gun from "gun/gun";
-import map from "lodash";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMousePointer } from "@fortawesome/free-solid-svg-icons";
 
+var _ = require('lodash');
 const radix = require("gun/lib/radix");
 const radisk = require("gun/lib/radisk");
 const store = require("gun/lib/store");
@@ -23,7 +23,7 @@ function uuidv4() {
 
 function App() {
   let [mice, setMice] = useState({});
-  let [myUid, setMyUid] = useState(uuidv4());
+  let [myUid, setMyUid] = useState(null);
   let [timer, setTimer] = useState(0);
   let [gunBase, setGunBase] = useState(null);
   
@@ -31,14 +31,14 @@ function App() {
     let miceCache = {};
     let unmounted = false;
     let gunRef = null;
-
+    let timeout = null;
 
     var gun = Gun({
       peers: ["https://aarondotwork-gun-server.herokuapp.com/gun"],
       radisk: radisk || false,
       localStorage: false,
     });
-    let temp_gunBase = gun.get("simple_mice").get("test_instance_3");
+    let temp_gunBase = gun.get("simple_mice").get("test_instance2");
     setGunBase(temp_gunBase);
 
     function updateTimer() {
@@ -47,10 +47,8 @@ function App() {
       requestAnimationFrame(updateTimer);
     }
     requestAnimationFrame(updateTimer);
-
     temp_gunBase.map().on((el, key, g) => {
       gunRef = g;
-      console.log("ya");
       miceCache[key] = el;
       setMice((old) => {
         return { ...old, [key]: el };
@@ -60,9 +58,21 @@ function App() {
         return;
       }
     });
+
+    setTimeout(() => {
+      let emptyId = _.sortBy(Object.values(miceCache),['t'] );
+      if (emptyId.length > 0 && Date.now() - emptyId[0].t > 1000) {
+        setMyUid(emptyId[0].k || uuidv4());
+      }
+      else {
+        setMyUid(uuidv4());
+      }
+    }, 3000);
+
     return () => {
       unmounted = true;
       gunRef?.off();
+      timeout && clearTimeout(timeout);
     };
   }, []);
   return (
@@ -70,7 +80,7 @@ function App() {
       className="App"
       style={{ width: "100vw", height: "100vh", background: "none" }}
       onMouseMove={(e) => {
-        if (gunBase == null) return;
+        if (gunBase == null || myUid == null) return;
         gunBase.get(myUid).put({
           x: e.clientX,
           y: e.clientY,
@@ -83,6 +93,7 @@ function App() {
         {Object.values(mice).map((el) =>
           Date.now() - el.t < 5000 && el.k != myUid ? (
             <FontAwesomeIcon
+              key={el.k}
               icon={faMousePointer}
               style={{
                 pointerEvents: "none",
