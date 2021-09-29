@@ -13,13 +13,6 @@ const store = require("gun/lib/store");
 const rindexed = require("gun/lib/rindexed");
 const webrtc = require("gun/lib/webrtc");
 
-var gun = Gun({
-  peers: ["https://aarondotwork-gun-server.herokuapp.com/gun"],
-  radisk: radisk || false,
-  localStorage: false,
-});
-let gunBase = gun.get("simple_mice").get("test_instance_2");
-
 function uuidv4() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     var r = (Math.random() * 16) | 0,
@@ -32,11 +25,21 @@ function App() {
   let [mice, setMice] = useState({});
   let [myUid, setMyUid] = useState(uuidv4());
   let [timer, setTimer] = useState(0);
+  let [gunBase, setGunBase] = useState(null);
   
   useEffect(() => {
     let miceCache = {};
     let unmounted = false;
     let gunRef = null;
+
+
+    var gun = Gun({
+      peers: ["https://aarondotwork-gun-server.herokuapp.com/gun"],
+      radisk: radisk || false,
+      localStorage: false,
+    });
+    let temp_gunBase = gun.get("simple_mice").get("test_instance_3");
+    setGunBase(temp_gunBase);
 
     function updateTimer() {
       if (unmounted) return;
@@ -45,7 +48,7 @@ function App() {
     }
     requestAnimationFrame(updateTimer);
 
-    gunBase.map().on((el, key, g) => {
+    temp_gunBase.map().on((el, key, g) => {
       gunRef = g;
       console.log("ya");
       miceCache[key] = el;
@@ -67,13 +70,13 @@ function App() {
       className="App"
       style={{ width: "100vw", height: "100vh", background: "none" }}
       onMouseMove={(e) => {
+        if (gunBase == null) return;
         gunBase.get(myUid).put({
           x: e.clientX,
           y: e.clientY,
           t: Date.now(),
           k: myUid,
         });
-        console.log("ya");
       }}
     >
       <div>
